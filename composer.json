@@ -1,0 +1,53 @@
+{
+    "name": "puff/config",
+    "description": "Puff Fast dot-notation configuration repository",
+    "type": "library",
+    "keywords": [
+        "php",
+        "configuration",
+        "environment",
+        "dot-notation",
+        "puff"
+    ],
+    "license": "MIT",
+    "require": {
+        "composer-runtime-api": "^2.0",
+        "php": "^8.2",
+        "puff/di": "dev-main"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "classmap": [
+            "src/Facades"
+        ],
+        "files": [
+            "lib/puff.php"
+        ],
+        "psr-4": {
+            "Puff\\Config\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Puff\\Config\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "puff": {
+            "providers": [
+                "Puff\\Config\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit tests"
+    }
+}
