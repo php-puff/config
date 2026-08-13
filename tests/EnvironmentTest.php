@@ -79,32 +79,32 @@ ENV);
         self::assertSame('system', \getenv('PUFF_TEST_PRIORITY'));
     }
 
-    public function testEnvironmentOverridesExistingConfigUsingDoubleUnderscores(): void
+    public function testEnvironmentOverridesTopLevelAndNestedConfig(): void
     {
         $root = $this->temporaryDirectory();
-        \file_put_contents($root . '/.env', "APP__LOG=2\nAPP__DEBUG=true\nUNKNOWN__VALUE=ignored\n");
-        \file_put_contents($root . '/config.php', '<?php return ["app" => ["log" => 1, "debug" => false]];');
-        $this->keys = [...$this->keys, 'APP__LOG', 'APP__DEBUG', 'UNKNOWN__VALUE'];
+        \file_put_contents($root . '/.env', "TIMEZONE=UTC\nLOGGER__LEVEL=warning\nUNKNOWN__VALUE=ignored\n");
+        \file_put_contents($root . '/config.php', '<?php return ["timezone" => "Asia/Shanghai", "logger" => ["level" => "info"]];');
+        $this->keys = [...$this->keys, 'TIMEZONE', 'LOGGER__LEVEL', 'UNKNOWN__VALUE'];
         $this->files[] = $root . '/config.php';
 
         $config = Config::load($root, $root . '/config.php');
 
-        self::assertSame(2, $config->get('app.log'));
-        self::assertTrue($config->get('app.debug'));
+        self::assertSame('UTC', $config->get('timezone'));
+        self::assertSame('warning', $config->get('logger.level'));
         self::assertFalse($config->has('unknown.value'));
     }
 
     public function testLoadAcceptsAFileAndAppliesEnvironmentInternally(): void
     {
         $root = $this->temporaryDirectory();
-        \file_put_contents($root . '/.env', 'APP__LOG=7');
-        \file_put_contents($root . '/config.php', '<?php return ["app" => ["log" => 1]];');
-        $this->keys[] = 'APP__LOG';
+        \file_put_contents($root . '/.env', 'WORKERS=7');
+        \file_put_contents($root . '/config.php', '<?php return ["workers" => 1];');
+        $this->keys[] = 'WORKERS';
         $this->files[] = $root . '/config.php';
 
         $config = $this->loadFromRoot($root, $root . '/config.php');
 
-        self::assertSame(7, $config->get('app.log'));
+        self::assertSame(7, $config->get('workers'));
     }
 
     public function testLoadReadsOnlyRootEnvironmentAndDoesNotLoadNamedEnvironmentConfig(): void
@@ -112,15 +112,15 @@ ENV);
         $root = $this->temporaryDirectory();
         \mkdir($root . '/config');
         $this->directories[] = $root . '/config';
-        \file_put_contents($root . '/.env', "APP__LOG=8\n");
-        \file_put_contents($root . '/config/config.php', '<?php return ["app" => ["log" => 1, "name" => "base"]];');
-        \file_put_contents($root . '/config/test.php', '<?php return ["app" => ["name" => "test"]];');
-        $this->keys[] = 'APP__LOG';
+        \file_put_contents($root . '/.env', "WORKERS=8\n");
+        \file_put_contents($root . '/config/config.php', '<?php return ["workers" => 1, "label" => "base"];');
+        \file_put_contents($root . '/config/test.php', '<?php return ["label" => "test"];');
+        $this->keys[] = 'WORKERS';
 
         $config = $this->loadFromRoot($root, $root . '/config');
 
-        self::assertSame(8, $config->get('app.log'));
-        self::assertSame('base', $config->get('app.name'));
+        self::assertSame(8, $config->get('workers'));
+        self::assertSame('base', $config->get('label'));
     }
 
     public function testInvalidEntryThrowsUsefulException(): void

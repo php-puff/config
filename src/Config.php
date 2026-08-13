@@ -140,10 +140,7 @@ final class Config
     private function applyEnvironment(Environment $environment): void
     {
         foreach ($environment->all() as $key => $value) {
-            if (!\str_contains($key, '__')) {
-                continue;
-            }
-            $path = \strtolower(\str_replace('__', '.', $key));
+            $path = \strtolower(\str_contains($key, '__') ? \str_replace('__', '.', $key) : $key);
             if ($this->has($path)) {
                 $this->set($path, self::env($value, $this->get($path)));
             }

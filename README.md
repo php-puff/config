@@ -50,19 +50,19 @@ Use dot notation to access nested configuration:
 use Puff\Config\Config;
 
 $config = new Config([
-    'app' => [
+    'site' => [
         'name' => 'Puff',
-        'debug' => false,
+        'locale' => 'en',
     ],
 ]);
 
-$name = $config->get('app.name');
-$fallback = $config->get('app.locale', 'en');
-$exists = $config->has('app.debug');
+$name = $config->get('site.name');
+$fallback = $config->get('site.locale', 'en');
+$exists = $config->has('site.name');
 
-$config->set('app.debug', true);
+$config->set('site.enabled', true);
 $config->set([
-    'app.locale' => 'en',
+    'site.locale' => 'en',
     'server.http.workers' => 4,
 ]);
 
@@ -72,8 +72,8 @@ $values = $config->all();
 Writing through a scalar intermediate value is rejected instead of silently replacing existing configuration:
 
 ```php
-$config = new Config(['app' => ['name' => 'Puff']]);
-$config->set('app.name.short', 'P'); // Throws ConfigException
+$config = new Config(['site' => ['name' => 'Puff']]);
+$config->set('site.name.short', 'P'); // Throws ConfigException
 ```
 
 ## Helpers and Facade
@@ -81,11 +81,11 @@ $config->set('app.name.short', 'P'); // Throws ConfigException
 The `config()` helper reads from the repository registered in the Puff container:
 
 ```php
-$name = config('app.name');
-$locale = config('app.locale', 'en');
+$name = config('site.name');
+$locale = config('site.locale', 'en');
 
 config([
-    'app.debug' => true,
+    'site.enabled' => true,
 ]);
 
 $repository = config();
@@ -94,16 +94,16 @@ $repository = config();
 The global `Config` facade provides the same repository operations:
 
 ```php
-$name = Config::get('app.name');
-Config::set('app.debug', true);
+$name = Config::get('site.name');
+Config::set('site.enabled', true);
 ```
 
 ## Environment Overrides
 
-Process environment variables take precedence over values from `.env`. Use a double underscore to represent each configuration level:
+Process environment variables take precedence over values from `.env`. Top-level keys use the same environment variable name; use a double underscore to represent each nested configuration level:
 
 ```dotenv
-APP__LOG=2
+TIMEZONE=UTC
 SERVER__HTTP__ADDR=127.0.0.1:8620
 DATABASE__CONNECTIONS__MYSQL__HOST=127.0.0.1
 ```
@@ -111,7 +111,7 @@ DATABASE__CONNECTIONS__MYSQL__HOST=127.0.0.1
 These variables map to:
 
 ```text
-app.log
+timezone
 server.http.addr
 database.connections.mysql.host
 ```
@@ -123,15 +123,13 @@ Values preserve the type of the existing configuration value when it is a boolea
 ```php
 // Existing configuration
 [
-    'app' => [
-        'debug' => false,
-        'workers' => 1,
-    ],
+    'enabled' => false,
+    'workers' => 1,
 ]
 
 // Environment
-APP__DEBUG=true
-APP__WORKERS=4
+ENABLED=true
+WORKERS=4
 ```
 
 The resulting values are `true` and `4`, not strings.

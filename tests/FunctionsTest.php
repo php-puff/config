@@ -26,14 +26,14 @@ final class FunctionsTest extends TestCase
     public function testConfigHelperUsesRegisteredConfigInstance(): void
     {
         $container = new Container();
-        $repository = new Config(['app' => ['name' => 'Puff']]);
+        $repository = new Config(['site' => ['name' => 'Puff']]);
         $container->instance(Config::class, $repository);
         Container::setInstance($container);
 
         self::assertSame($repository, \config());
-        self::assertSame('Puff', \config('app.name'));
-        self::assertSame($repository, \config(['app.version' => '1.0.0']));
-        self::assertSame('1.0.0', \config('app.version'));
+        self::assertSame('Puff', \config('site.name'));
+        self::assertSame($repository, \config(['site.version' => '1.0.0']));
+        self::assertSame('1.0.0', \config('site.version'));
     }
 
     public function testEnvHelperUsesConfigValueConversion(): void
