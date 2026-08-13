@@ -14,6 +14,7 @@ namespace Puff\Config\Tests;
 use PHPUnit\Framework\TestCase;
 use Puff\Config\Config;
 use Puff\Config\ConfigException;
+use Puff\Config\ConfigPublisher;
 use Puff\Config\ServiceProvider;
 use Puff\Di\Container;
 
@@ -73,6 +74,21 @@ final class ConfigTest extends TestCase
         self::assertSame([3, 2], $config->get('site.ports'));
     }
 
+    public function testLoadsDirectoryFilesByTheirRelativeNames(): void
+    {
+        $root = $this->directory();
+        $directory = $this->directory($root . '/config');
+        $this->file($directory . '/config.php', '<?php return ["timezone" => "UTC"];');
+        $this->file($directory . '/cache.php', '<?php return ["default" => "memory"];');
+        $this->file($directory . '/http.php', '<?php return ["addr" => "127.0.0.1:8620"];');
+
+        $config = Config::load($root, $directory);
+
+        self::assertSame('UTC', $config->get('timezone'));
+        self::assertSame('memory', $config->get('cache.default'));
+        self::assertSame('127.0.0.1:8620', $config->get('http.addr'));
+    }
+
     public function testServiceProviderLoadsFromComposerRootPath(): void
     {
         $container = new Container();
@@ -81,6 +97,29 @@ final class ConfigTest extends TestCase
 
         self::assertInstanceOf(Config::class, $container->make(Config::class));
         self::assertSame($container->make(Config::class), $container->make('config'));
+    }
+
+    public function testPublishesPackageConfigurationWithoutOverwritingApplicationFiles(): void
+    {
+        $root = $this->directory();
+        $vendor = $this->directory($root . '/vendor');
+        $composer = $this->directory($vendor . '/composer');
+        $package = $this->directory($vendor . '/puff-cache');
+        $packageConfig = $this->directory($package . '/config');
+        $this->file($packageConfig . '/cache.php', '<?php return ["default" => "memory"];');
+        $installed = [[
+            'name' => 'puff/cache',
+            'install_path' => '../puff-cache',
+            'extra' => ['puff' => ['config' => ['cache.php' => 'config/cache.php']]],
+        ]];
+        $this->file($composer . '/installed.json', (string) \json_encode($installed, JSON_THROW_ON_ERROR));
+
+        self::assertSame(1, ConfigPublisher::publish($root));
+        self::assertSame(0, ConfigPublisher::publish($root));
+        self::assertSame('<?php return ["default" => "memory"];', \file_get_contents($root . '/config/cache.php'));
+
+        $this->files[] = $root . '/config';
+        $this->files[] = $root . '/config/cache.php';
     }
 
     private function directory(?string $path = null): string

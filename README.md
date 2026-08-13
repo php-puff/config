@@ -17,6 +17,8 @@ The package exposes `Puff\Config\ServiceProvider` through Puff's Composer auto-d
 
 ```text
 <project-root>/config/config.php
+<project-root>/config/*.php
+<project-root>/config/**/*.php
 <project-root>/app/config.php
 <project-root>/.env
 ```
@@ -34,11 +36,38 @@ $basePath = __DIR__;
 $config = Config::load(
     $basePath,
     $basePath . '/config',
-    $basePath . '/app',
+    $basePath . '/app/config.php',
 );
 ```
 
-`Config::load()` accepts files or directories. When a directory is provided, only its `config.php` file is loaded. Files are merged in the order supplied using `array_replace_recursive()`, so later values replace earlier values. Numeric arrays therefore use recursive index replacement rather than list concatenation.
+`Config::load()` accepts files or directories. A directory is scanned recursively in stable filename order. Its `config.php` is merged at the top level; every other PHP file is mounted under its relative filename:
+
+```text
+config/cache.php            -> cache
+config/http.php      -> http
+config/websocket.php -> websocket
+```
+
+Each component file returns only the value for its own root key. Files are merged using `array_replace_recursive()`, so later values replace earlier values. Numeric arrays use recursive index replacement rather than list concatenation. Files that do not return an array are ignored.
+
+## Publishing Component Configuration
+
+Puff packages may declare configuration templates in Composer metadata:
+
+```json
+{
+    "extra": {
+        "puff": {
+            "config": {
+                "cache.php": "config/cache.php",
+                "http.php": "config/http.php"
+            }
+        }
+    }
+}
+```
+
+Puff's `post-install-cmd` and `post-update-cmd` call `Puff\Config\ConfigPublisher::publish`. Missing templates are copied into the application's `config` directory when a component is installed. Existing application files are never overwritten.
 
 The loader always reads `<base-path>/.env`. It does not automatically load environment-specific files such as `dev.php`, `test.php`, or `.env.local`.
 
@@ -63,7 +92,7 @@ $exists = $config->has('site.name');
 $config->set('site.enabled', true);
 $config->set([
     'site.locale' => 'en',
-    'server.http.workers' => 4,
+    'http.workers' => 4,
 ]);
 
 $values = $config->all();
@@ -104,7 +133,7 @@ Process environment variables take precedence over values from `.env`. Top-level
 
 ```dotenv
 TIMEZONE=UTC
-SERVER__HTTP__ADDR=127.0.0.1:8620
+HTTP__ADDR=127.0.0.1:8620
 DATABASE__CONNECTIONS__MYSQL__HOST=127.0.0.1
 ```
 
@@ -112,7 +141,7 @@ These variables map to:
 
 ```text
 timezone
-server.http.addr
+http.addr
 database.connections.mysql.host
 ```
 

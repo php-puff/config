@@ -24,6 +24,7 @@ final class Config
 
     public static function load(string $basePath, string ...$paths): self
     {
+        $paths = \array_values($paths);
         $files = [];
         foreach ($paths as $path) {
             if (\is_file($path)) {
@@ -31,25 +32,88 @@ final class Config
                 continue;
             }
             if (\is_dir($path)) {
-                $file = \rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'config.php';
-                if (\is_file($file)) {
-                    $files[] = $file;
-                }
+                $files = [...$files, ...self::configFiles($path)];
             }
         }
 
         $items = [];
         foreach (\array_unique($files) as $file) {
             $loaded = require $file;
-            if (\is_array($loaded)) {
-                $items = \array_replace_recursive($items, $loaded);
+            if (!\is_array($loaded)) {
+                continue;
             }
+            $root = self::configRoot($file, $paths);
+            if ($root === null) {
+                $items = \array_replace_recursive($items, $loaded);
+                continue;
+            }
+            self::setConfigRoot($items, $root, $loaded);
         }
 
         $config = new self($items);
         $environment = Environment::load(\rtrim($basePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.env')->apply();
         $config->applyEnvironment($environment);
         return $config;
+    }
+
+    /** @return list<string> */
+    private static function configFiles(string $directory): array
+    {
+        $directory = \rtrim($directory, DIRECTORY_SEPARATOR);
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                $files[] = $file->getPathname();
+            }
+        }
+        \sort($files, SORT_STRING);
+        $entry = $directory . DIRECTORY_SEPARATOR . 'config.php';
+        if (($index = \array_search($entry, $files, true)) !== false) {
+            unset($files[$index]);
+            \array_unshift($files, $entry);
+        }
+        return \array_values($files);
+    }
+
+    /** @param list<string> $paths */
+    private static function configRoot(string $file, array $paths): ?string
+    {
+        if (\basename($file) === 'config.php') {
+            return null;
+        }
+        foreach ($paths as $path) {
+            $directory = \realpath($path);
+            if ($directory === false || !\is_dir($directory)) {
+                continue;
+            }
+            $prefix = \rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            $resolved = \realpath($file);
+            if ($resolved === false || !\str_starts_with($resolved, $prefix)) {
+                continue;
+            }
+            $relative = \substr($resolved, \strlen($prefix), -4);
+            return \str_replace(DIRECTORY_SEPARATOR, '.', $relative);
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $items
+     * @param array<string, mixed> $value
+     */
+    private static function setConfigRoot(array &$items, string $root, array $value): void
+    {
+        $target = &$items;
+        foreach (\explode('.', $root) as $segment) {
+            if (!isset($target[$segment]) || !\is_array($target[$segment])) {
+                $target[$segment] = [];
+            }
+            $target = &$target[$segment];
+        }
+        $target = \array_replace_recursive($target, $value);
     }
 
     public static function env(string $value, mixed $current = null): mixed

@@ -25,7 +25,7 @@ final class ServiceProvider extends BaseServiceProvider
 
         $package = InstalledVersions::getRootPackage();
         $root = \realpath($package['install_path']) ?: $package['install_path'];
-        $config = Config::load($root, $root . '/config', $root . '/app');
+        $config = Config::load($root, $root . '/config', $root . '/app/config.php');
         $this->app->instance(Config::class, $config);
         $this->app->alias(Config::class, 'config');
     }
