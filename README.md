@@ -44,8 +44,8 @@ $config = Config::load(
 
 ```text
 config/cache.php            -> cache
-config/http.php      -> http
-config/websocket.php -> websocket
+config/http.server.php      -> http.server
+config/websocket.server.php -> websocket.server
 ```
 
 Each component file returns only the value for its own root key. Files are merged using `array_replace_recursive()`, so later values replace earlier values. Numeric arrays use recursive index replacement rather than list concatenation. Files that do not return an array are ignored.
@@ -60,7 +60,7 @@ Puff packages may declare configuration templates in Composer metadata:
         "puff": {
             "config": {
                 "cache.php": "config/cache.php",
-                "http.php": "config/http.php"
+                "http.server.php": "config/http.server.php"
             }
         }
     }
