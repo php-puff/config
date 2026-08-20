@@ -122,6 +122,28 @@ final class ConfigTest extends TestCase
         $this->files[] = $root . '/config/cache.php';
     }
 
+    public function testPublishesPackageNamedConfigurationFile(): void
+    {
+        $root = $this->directory();
+        $vendor = $this->directory($root . '/vendor');
+        $composer = $this->directory($vendor . '/composer');
+        $package = $this->directory($vendor . '/http-client');
+        $packageConfig = $this->directory($package . '/config');
+        $this->file($packageConfig . '/http.client.php', '<?php return [];');
+        $installed = [[
+            'name' => 'puff/http-client',
+            'install_path' => '../http-client',
+            'extra' => ['puff' => ['config' => ['http.client.php' => 'config/http.client.php']]],
+        ]];
+        $this->file($composer . '/installed.json', (string) \json_encode($installed, JSON_THROW_ON_ERROR));
+
+        self::assertSame(1, ConfigPublisher::publish($root));
+        self::assertFileExists($root . '/config/http.client.php');
+
+        $this->files[] = $root . '/config';
+        $this->files[] = $root . '/config/http.client.php';
+    }
+
     private function directory(?string $path = null): string
     {
         $path ??= \sys_get_temp_dir() . '/puff-config-' . \bin2hex(\random_bytes(6));

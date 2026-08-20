@@ -48,7 +48,7 @@ final class ConfigPublisher
 
     private static function publishFile(string $basePath, string $packagePath, string $target, string $source): bool
     {
-        if (\preg_match('#^(?:[a-z][a-z0-9_-]*/)*[a-z][a-z0-9_-]*\.php$#D', $target) !== 1
+        if (\preg_match('#^(?:[a-z][a-z0-9_-]*/)*[a-z][a-z0-9_.-]*\.php$#D', $target) !== 1
             || \preg_match('#^(?!/)(?!.*\.\.)[^\0]+\.php$#D', $source) !== 1) {
             throw new ConfigException("Invalid published configuration path [{$target}].");
         }
