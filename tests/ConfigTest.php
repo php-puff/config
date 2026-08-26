@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Puff\Config\Tests;
 
+use Composer\InstalledVersions;
 use PHPUnit\Framework\TestCase;
 use Puff\Config\Config;
 use Puff\Config\ConfigException;
@@ -23,8 +24,22 @@ final class ConfigTest extends TestCase
     /** @var list<string> */
     private array $files = [];
 
+    /**
+     * @var array{
+     *     root: array{name: string, pretty_version: string, version: string, reference: string|null, type: string, install_path: string, aliases: array<string>, dev: bool},
+     *     versions: array<string, array{pretty_version?: string, version?: string, reference?: string|null, type?: string, install_path?: string, aliases?: array<string>, dev_requirement: bool, replaced?: array<string>, provided?: array<string>}>
+     * }
+     */
+    private array $installed;
+
+    protected function setUp(): void
+    {
+        $this->installed = InstalledVersions::getAllRawData()[0];
+    }
+
     protected function tearDown(): void
     {
+        InstalledVersions::reload($this->installed);
         foreach (\array_reverse($this->files) as $path) {
             if (\is_file($path)) {
                 \unlink($path);
@@ -103,16 +118,14 @@ final class ConfigTest extends TestCase
     {
         $root = $this->directory();
         $vendor = $this->directory($root . '/vendor');
-        $composer = $this->directory($vendor . '/composer');
         $package = $this->directory($vendor . '/puff-cache');
         $packageConfig = $this->directory($package . '/config');
         $this->file($packageConfig . '/cache.php', '<?php return ["default" => "memory"];');
-        $installed = [[
-            'name' => 'puff/cache',
-            'install_path' => '../puff-cache',
+        $this->file($package . '/composer.json', (string) \json_encode([
+            'name' => 'puff/testing-cache',
             'extra' => ['puff' => ['config' => ['cache.php' => 'config/cache.php']]],
-        ]];
-        $this->file($composer . '/installed.json', (string) \json_encode($installed, JSON_THROW_ON_ERROR));
+        ], JSON_THROW_ON_ERROR));
+        $this->reloadInstalledPackage('puff/testing-cache', $package);
 
         self::assertSame(1, ConfigPublisher::publish($root));
         self::assertSame(0, ConfigPublisher::publish($root));
@@ -126,22 +139,35 @@ final class ConfigTest extends TestCase
     {
         $root = $this->directory();
         $vendor = $this->directory($root . '/vendor');
-        $composer = $this->directory($vendor . '/composer');
         $package = $this->directory($vendor . '/http-client');
         $packageConfig = $this->directory($package . '/config');
         $this->file($packageConfig . '/http.client.php', '<?php return [];');
-        $installed = [[
-            'name' => 'puff/http-client',
-            'install_path' => '../http-client',
+        $this->file($package . '/composer.json', (string) \json_encode([
+            'name' => 'puff/testing-http-client',
             'extra' => ['puff' => ['config' => ['http.client.php' => 'config/http.client.php']]],
-        ]];
-        $this->file($composer . '/installed.json', (string) \json_encode($installed, JSON_THROW_ON_ERROR));
+        ], JSON_THROW_ON_ERROR));
+        $this->reloadInstalledPackage('puff/testing-http-client', $package);
 
         self::assertSame(1, ConfigPublisher::publish($root));
         self::assertFileExists($root . '/config/http.client.php');
 
         $this->files[] = $root . '/config';
         $this->files[] = $root . '/config/http.client.php';
+    }
+
+    private function reloadInstalledPackage(string $name, string $path): void
+    {
+        $installed = $this->installed;
+        $installed['versions'][$name] = [
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => null,
+            'type' => 'library',
+            'install_path' => $path,
+            'aliases' => [],
+            'dev_requirement' => true,
+        ];
+        InstalledVersions::reload($installed);
     }
 
     private function directory(?string $path = null): string

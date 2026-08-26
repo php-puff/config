@@ -67,7 +67,7 @@ Puff packages may declare configuration templates in Composer metadata:
 }
 ```
 
-Puff's `post-install-cmd` and `post-update-cmd` call `Puff\Config\ConfigPublisher::publish`. Missing templates are copied into the application's `config` directory when a component is installed. Existing application files are never overwritten.
+Puff's `post-install-cmd` and `post-update-cmd` call `Puff\Config\ConfigPublisher::publish`. The publisher uses Composer's Runtime API to locate installed packages, then reads their `extra.puff.config` metadata. Missing templates are copied into the application's `config` directory when a component is installed. Existing application files are never overwritten.
 
 The loader always reads `<base-path>/.env`. It does not automatically load environment-specific files such as `dev.php`, `test.php`, or `.env.local`.
 
